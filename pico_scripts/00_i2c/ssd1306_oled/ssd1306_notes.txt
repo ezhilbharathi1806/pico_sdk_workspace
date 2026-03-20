@@ -1,0 +1,345 @@
+Step 1: Download Library Files
+	Download these 3 files from https://github.com/daschr/pico-ssd1306 to your project:[1]
+		->ssd1306.h
+		->ssd1306.c
+		->font.h
+		
+Step 2: Wiring Connections
+	Connect your SSD1306 OLED (I2C) to Raspberry Pi Pico:[3][4]
+	SSD1306 Display    Raspberry Pi Pico
+	===============    =================
+	VCC (VIN)       →  3.3V (Pin 36)
+	GND             →  GND (Pin 38)
+	SCL (Clock)     →  GPIO 5 (Pin 7)   - I2C0 SCL
+	SDA (Data)      →  GPIO 4 (Pin 6)   - I2C0 SDA
+
+Step 3: Project Structure
+	/ssd1306_hello_world
+	│
+	├── CMakeLists.txt
+	├── pico_sdk_import.cmake
+	│
+	├── /lib
+	│   ├── ssd1306.h
+	│   ├── ssd1306.c
+	│   └── font.h
+	│
+	└── /src
+		└── main.c
+
+Step 4: create main.c and CMakeLists.txt
+
+Step 5: Build Instructions
+	mkdir build
+	cd build
+	cmake -G "MinGW Makefiles" ../
+	mingw32-make
+
+Flash ssd1306_hello_world.uf2 to your Pico.
+
+======================================================================================================
+
+Library Overview -> https://github.com/daschr/pico-ssd1306
+	daschr/pico-ssd1306 is a lightweight C library for interfacing SSD1306 OLED displays with Raspberry Pi Pico using I2C communication.[1]
+	Key Features:[1]
+	•	Pure C implementation (93.1% C code)
+	•	I2C communication
+	•	Built-in font support
+	•	Drawing primitives (pixels, lines, rectangles)
+	•	Bitmap/image rendering (monochrome BMP)
+	•	Custom font support
+	•	Low memory footprint
+
+Core Data Structure
+	ssd1306_t Structure
+	typedef struct {
+		uint8_t width;           // Display width (e.g., 128)
+		uint8_t height;          // Display height (e.g., 64 or 32)
+		uint8_t pages;           // Number of pages (calculated internally)
+		uint8_t address;         // I2C address (0x3C or 0x3D)
+		i2c_inst_t *i2c_i;       // Pico I2C instance (i2c0 or i2c1)
+		bool external_vcc;       // false = internal charge pump, true = external VCC
+		uint8_t *buffer;         // Display framebuffer (allocated internally)
+		size_t bufsize;          // Buffer size in bytes
+	} ssd1306_t;
+
+	Usage: Holds all configuration and state for a single display instance.
+
+|-------------------------------------API Reference-----------------------------------------|
+
+| Category | Function                             | Purpose            | Common Use         |
+| -------- | ------------------------------------ | ------------------ | ------------------ |
+| Init     | ssd1306_init()                       | Initialize display | Program startup    |
+| Init     | ssd1306_deinit()                     | Clean up           | Program exit       |
+| Power    | ssd1306_poweroff()                   | Turn off           | Power saving       |
+| Power    | ssd1306_poweron()                    | Turn on            | Wake from sleep    |
+| Display  | ssd1306_contrast()                   | Set brightness     | Adjust visibility  |
+| Display  | ssd1306_invert()                     | Invert colors      | Visual effects     |
+| Buffer   | ssd1306_show()                       | Update screen      | After drawing      |
+| Buffer   | ssd1306_clear()                      | Clear buffer       | Reset display      |
+| Pixels   | ssd1306_draw_pixel()                 | Draw pixel         | Plotting, graphics |
+| Pixels   | ssd1306_clear_pixel()                | Erase pixel        | Selective erase    |
+| Shapes   | ssd1306_draw_line()                  | Draw line          | Graphs, borders    |
+| Shapes   | ssd1306_draw_square()                | Filled rectangle   | Bars, buttons      |
+| Shapes   | ssd1306_draw_empty_square()          | Outline rectangle  | Frames, boxes      |
+| Shapes   | ssd1306_clear_square()               | Erase area         | Partial clear      |
+| Text     | ssd1306_draw_char()                  | Single character   | Custom layouts     |
+| Text     | ssd1306_draw_string()                | Text string        | Messages, labels   |
+| Text     | ssd1306_draw_char_with_font()        | Custom font char   | Typography         |
+| Text     | ssd1306_draw_string_with_font()      | Custom font string | Styled text        |
+| Images   | ssd1306_bmp_show_image()             | Full image         | Splash screens     |
+| Images   | ssd1306_bmp_show_image_with_offset() | Positioned image   | Icons, logos       |
+
+
+1. Initialization & Control APIs
+	ssd1306_init()
+		bool ssd1306_init(ssd1306_t *p, uint16_t width, uint16_t height, 
+						uint8_t address, i2c_inst_t *i2c_instance);
+
+		Purpose: Initialize the SSD1306 display
+		Parameters:
+		•	p - Pointer to ssd1306_t instance
+		•	width - Display width (128)
+		•	height - Display height (64 or 32)
+		•	address - I2C address (0x3C or 0x3D)
+		•	i2c_instance - I2C hardware instance (i2c0 or i2c1)
+		Returns: true on success, false on failure
+		Example:
+		ssd1306_t disp;
+		disp.external_vcc = false;  // Use internal charge pump
+		ssd1306_init(&disp, 128, 64, 0x3C, i2c0);
+
+		When to use: Call once at program startup to configure display.
+	
+	ssd1306_deinit()
+		void ssd1306_deinit(ssd1306_t *p);
+
+		Purpose: Deinitialize display and free allocated buffer memory
+		When to use: Before program exit to clean up resources.
+	
+	ssd1306_poweroff()
+		void ssd1306_poweroff(ssd1306_t *p);
+
+		Purpose: Turn off display (power saving mode)
+		When to use: To save power when display not needed temporarily.
+	
+	ssd1306_poweron()
+		void ssd1306_poweron(ssd1306_t *p);
+
+		Purpose: Turn on display after poweroff
+		Example:
+		ssd1306_poweroff(&disp);  // Turn off
+		sleep_ms(5000);           // Sleep 5 seconds
+		ssd1306_poweron(&disp);   // Turn back on
+
+	
+	ssd1306_contrast()
+		void ssd1306_contrast(ssd1306_t *p, uint8_t val);
+
+		Purpose: Set display brightness/contrast
+		Parameters:
+		•	val - Contrast value (0-255, higher = brighter)
+		Example:
+		ssd1306_contrast(&disp, 128);  // Medium brightness
+		ssd1306_contrast(&disp, 255);  // Maximum brightness
+
+		When to use: Adjust for different ambient lighting conditions.
+	
+	ssd1306_invert()
+		void ssd1306_invert(ssd1306_t *p, uint8_t inv);
+
+		Purpose: Invert display colors (black ↔ white)
+		Parameters:
+		•	inv - 0 = normal, non-zero = inverted
+		Example:
+		ssd1306_invert(&disp, 1);  // White on black → Black on white
+		ssd1306_invert(&disp, 0);  // Back to normal
+
+		When to use: Create visual effects or highlight modes.
+	
+2. Display Buffer Management
+	ssd1306_show()
+		void ssd1306_show(ssd1306_t *p);
+
+		Purpose: Send framebuffer to display (update screen)
+		⚠️ Critical: Must be called after any drawing operation to see changes!
+		Example:
+		ssd1306_draw_string(&disp, 0, 0, 1, "Hello");  // Draw to buffer
+		ssd1306_show(&disp);                            // Update display!
+
+		How it works: Transfers entire framebuffer to display via I2C.
+	
+	ssd1306_clear()
+		void ssd1306_clear(ssd1306_t *p);
+
+		Purpose: Clear entire framebuffer (fill with black)
+		Example:
+		ssd1306_clear(&disp);  // Clear buffer
+		ssd1306_show(&disp);   // Update display to show blank screen
+
+		When to use: Before drawing new frame or to reset display.
+ 
+3. Pixel Drawing APIs
+	ssd1306_draw_pixel()
+		void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y);
+
+		Purpose: Turn on a single pixel
+		Parameters:
+		•	x - Horizontal position (0 to width-1)
+		•	y - Vertical position (0 to height-1)
+		Example:
+		ssd1306_draw_pixel(&disp, 64, 32);  // Draw center pixel
+		ssd1306_show(&disp);
+
+		When to use: Plotting points, custom graphics.
+	
+	ssd1306_clear_pixel()
+		void ssd1306_clear_pixel(ssd1306_t *p, uint32_t x, uint32_t y);
+
+		Purpose: Turn off a single pixel
+		When to use: Erasing specific pixels without clearing entire screen.
+ 
+4. Shape Drawing APIs
+	ssd1306_draw_line()
+		void ssd1306_draw_line(ssd1306_t *p, int32_t x1, int32_t y1, 
+							int32_t x2, int32_t y2);
+
+		Purpose: Draw line between two points
+		Example:
+		// Draw diagonal line from top-left to bottom-right
+		ssd1306_draw_line(&disp, 0, 0, 127, 63);
+		ssd1306_show(&disp);
+
+		When to use: Graphs, borders, geometric shapes.
+	
+	ssd1306_draw_square()
+		void ssd1306_draw_square(ssd1306_t *p, uint32_t x, uint32_t y, 
+								uint32_t width, uint32_t height);
+
+		Purpose: Draw filled rectangle
+		Parameters:
+		•	x, y - Top-left corner position
+		•	width - Rectangle width
+		•	height - Rectangle height
+		Example:
+		// Draw filled rectangle at (10, 10) with size 50x30
+		ssd1306_draw_square(&disp, 10, 10, 50, 30);
+		ssd1306_show(&disp);
+
+		When to use: Progress bars, buttons, filled shapes.
+	
+	ssd1306_draw_empty_square()
+		void ssd1306_draw_empty_square(ssd1306_t *p, uint32_t x, uint32_t y, 
+									uint32_t width, uint32_t height);
+
+		Purpose: Draw outline rectangle (not filled)
+		Example:
+		// Draw border around entire display
+		ssd1306_draw_empty_square(&disp, 0, 0, 128, 64);
+		ssd1306_show(&disp);
+
+		When to use: Borders, frames, selection boxes.
+	
+	ssd1306_clear_square()
+		void ssd1306_clear_square(ssd1306_t *p, uint32_t x, uint32_t y, 
+								uint32_t width, uint32_t height);
+
+		Purpose: Clear (erase) rectangular area
+		Example:
+		// Erase center 40x20 area
+		ssd1306_clear_square(&disp, 44, 22, 40, 20);
+		ssd1306_show(&disp);
+
+		When to use: Erasing specific regions without full clear.
+	
+5. Text Drawing APIs
+	ssd1306_draw_char()
+		void ssd1306_draw_char(ssd1306_t *p, uint32_t x, uint32_t y, 
+							uint32_t scale, char c);
+
+		Purpose: Draw single character using built-in font
+		Parameters:
+		•	x, y - Starting position
+		•	scale - Font size multiplier (1 = normal, 2 = double size, etc.)
+		•	c - Character to draw
+		Example:
+		ssd1306_draw_char(&disp, 10, 10, 1, 'A');  // Normal 'A'
+		ssd1306_draw_char(&disp, 30, 10, 2, 'B');  // Double-size 'B'
+		ssd1306_show(&disp);
+
+		When to use: Single character indicators, custom text layouts.
+	
+	ssd1306_draw_string()
+		void ssd1306_draw_string(ssd1306_t *p, uint32_t x, uint32_t y, 
+								uint32_t scale, const char *s);
+
+		Purpose: Draw text string using built-in font
+		Example:
+		ssd1306_draw_string(&disp, 0, 0, 1, "Hello World!");
+		ssd1306_draw_string(&disp, 0, 16, 2, "Big Text");
+		ssd1306_show(&disp);
+
+		When to use: Displaying messages, labels, data.
+	
+	ssd1306_draw_char_with_font()
+		void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, 
+										uint32_t scale, const uint8_t *font, char c);
+
+		Purpose: Draw character using custom font
+		Parameters:
+		•	font - Pointer to custom font array
+		Font Format (from documentation):[1]
+		1.	Byte 0: Font height
+		2.	Byte 1: Font width
+		3.	Byte 2: Character spacing
+		4.	Byte 3: First ASCII character in font
+		5.	Byte 4: Last ASCII character in font
+		6.	Remaining bytes: Character pixel data (vertical encoding)
+		When to use: Using custom fonts, special typography.
+	
+	ssd1306_draw_string_with_font()
+		void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, 
+										uint32_t scale, const uint8_t *font, 
+										const char *s);
+
+		Purpose: Draw string using custom font
+		When to use: Displaying text with custom typefaces.
+ 
+6. Image/Bitmap APIs
+	ssd1306_bmp_show_image()
+		void ssd1306_bmp_show_image(ssd1306_t *p, const uint8_t *data, 
+									const long size);
+
+		Purpose: Display monochrome BMP image (fills entire screen)
+		Parameters:
+		•	data - Pointer to BMP file data (entire file)
+		•	size - File size in bytes
+		Example:
+		#include "my_image.h"  // Generated with bin2c
+		ssd1306_bmp_show_image(&disp, my_image_data, my_image_size);
+		ssd1306_show(&disp);
+
+		How to create images:[1]
+		# Convert image to monochrome BMP
+		convert your_image.png -monochrome output.bmp
+
+		# Convert to C array
+		./tools/bin2c output.bmp output.h
+
+		When to use: Splash screens, logos, icons.
+	
+	ssd1306_bmp_show_image_with_offset()
+		void ssd1306_bmp_show_image_with_offset(ssd1306_t *p, const uint8_t *data, 
+												const long size, uint32_t x_offset, 
+												uint32_t y_offset);
+
+		Purpose: Display image at specific position (not full screen)
+		Parameters:
+		•	x_offset - Horizontal offset
+		•	y_offset - Vertical offset
+		Example:
+		// Draw image at position (20, 10)
+		ssd1306_bmp_show_image_with_offset(&disp, logo_data, logo_size, 20, 10);
+		ssd1306_show(&disp);
+
+		When to use: Placing multiple images, partial screen updates.

@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.13)
+
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)     # Include build functions from Pico SDK
+
+project(lcd_i2c_example C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+pico_sdk_init()
+
+add_executable(lcd_i2c_example
+    main.c
+    lcd_i2c.c
+)
+
+target_link_libraries(lcd_i2c_example
+    pico_stdlib
+    hardware_i2c
+)
+
+pico_add_extra_outputs(lcd_i2c_example)
