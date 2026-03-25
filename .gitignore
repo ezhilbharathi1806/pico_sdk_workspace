@@ -1,3 +1,5 @@
 pico/
 **/build/
+.vscode/
 reference_documents/
+pico_freertos_scripts/FreeRTOS-Kernel/
